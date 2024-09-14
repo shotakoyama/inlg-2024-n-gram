@@ -1,0 +1,496 @@
+\newcommand{\conllwidth}{7.5cm}
+\newcommand{\conllheight}{5.5cm}
+
+\newcommand{\coords}{
+    \node at (INA) {\textsf{\small INPUT}};
+    \node at (AMA) {\textsf{\small AMU}};
+    \node at (CAA) {\textsf{\small CAMB}};
+    \node at (CUA) {\textsf{\small CUUI}};
+    \node at (IIA) {\textsf{\small IITB}};
+    \node at (IPA) {\textsf{\small IPN}};
+    \node at (NTA) {\textsf{\small NTHU}};
+    \node at (PKA) {\textsf{\small PKU}};
+    \node at (POA) {\textsf{\small POST}};
+    \node at (RAA) {\textsf{\small RAC}};
+    \node at (SJA) {\textsf{\small SJTU}};
+    \node at (UFA) {\textsf{\small UFC}};
+    \node at (UMA) {\textsf{\small UMC}};
+}
+
+\newcommand{\scatterseeda}{
+    \begin{tikzpicture}
+        \begin{axis}[
+                xmin = 0.010,
+                xmax = 0.860,
+                ymin = 75.5,
+                ymax = 89.0,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = {wordGREEN ($\beta = 2.0$)}]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.363, 82.5696) % BART
+                (0.540, 86.2101) % BERT-fuse
+                (0.418, 84.8047) % GECToR-BERT
+                (0.381, 83.4959) % GECToR-ens
+                (0.431, 83.5041) % LM-Critic
+                (0.507, 85.5324) % PIE
+                (0.556, 85.8914) % REF-M
+                (0.527, 86.0889) % Riken-Tohoku
+                (0.634, 86.9760) % T5
+                (0.423, 84.0395) % TemplateGEC
+                (0.647, 87.4365) % TransGEC
+                (0.411, 85.3254) % UEDIN-MS
+            };
+            \addplot[only marks, mark=*, draw=orange, color=orange] coordinates{
+                (0.781, 84.9225) % GPT-3.5
+                (0.813, 81.8876) % REF-F
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.068, 76.9281) % INPUT
+            };
+            \coordinate (BA) at (axis cs: 0.363, 82.5696);
+            \coordinate (BE) at (axis cs: 0.540, 86.2101);
+            \coordinate (GB) at (axis cs: 0.418, 84.8047);
+            \coordinate (GE) at (axis cs: 0.381, 83.4959);
+            \coordinate (GP) at (axis cs: 0.781, 84.9225);
+            \coordinate (IN) at (axis cs: 0.068, 76.9281);
+            \coordinate (LM) at (axis cs: 0.431, 83.5041);
+            \coordinate (PI) at (axis cs: 0.507, 85.5324);
+            \coordinate (RF) at (axis cs: 0.813, 81.8876);
+            \coordinate (RM) at (axis cs: 0.556, 85.8914);
+            \coordinate (RT) at (axis cs: 0.527, 86.0889);
+            \coordinate (TF) at (axis cs: 0.634, 86.9760);
+            \coordinate (TE) at (axis cs: 0.423, 84.0395);
+            \coordinate (TR) at (axis cs: 0.647, 87.4365);
+            \coordinate (UM) at (axis cs: 0.411, 85.3254);
+            \node at ($(IN)+( 0.50cm,  0.20cm)$) {\textsf{\small INPUT}};
+            % 0.3 - 0.4
+            \node at ($(BA)+(-0.50cm,  0.05cm)$) {\textsf{\small BART}};
+            \node at ($(GE)+(-1.05cm,  0.10cm)$) {\textsf{\small GECToR-ens}};
+            % 0.4 - 0.5
+            \node at ($(UM)+(-1.10cm,  0.150cm)$) {\textsf{\small UEDIN-MS}};
+            \node at ($(GB)+(-1.30cm,  0.025cm)$) {\textsf{\small GECToR-BERT}};
+            \node at ($(TE)+( 1.30cm,  -0.35cm)$) {\textsf{\small TemplateGEC}};
+            \node at ($(LM)+( 0.80cm,  -0.45cm)$) {\textsf{\small LM-Critic}};
+            \draw[-{Latex[round]}] ($(TE)+( 0.45cm, -0.15cm)$) -- ($(TE)+( 0.10cm, 0.00cm)$);
+            \draw[-{Latex[round]}] ($(LM)+( 0.15cm, -0.45cm)$) -- ($(LM)+( 0.05cm, -0.10cm)$);
+            % 0.5 - 0.6
+            \node at ($(PI)+( 0.00cm, -0.25cm)$) {\textsf{\small PIE}};
+            \node at ($(RT)+(-1.00cm,  0.25cm)$) {\textsf{\small Riken-Tohoku}};
+            \node at ($(BE)+(-0.60cm,  0.50cm)$) {\textsf{\small BERT-fuse}};
+            \draw[-{Latex[round]}] ($(BE)+(-0.10cm, 0.35cm)$) -- ($(BE)+(-0.00cm, 0.10cm)$);
+            \node at ($(RM)+( 0.50cm, -0.20cm)$) {\textsf{\small REF-M}};
+            % 0.6 - 0.7
+            \node at ($(TR)+( 0.40cm, 0.25cm)$) {\textsf{\small TransGEC}};
+            \node at ($(TF)+( 0.30cm, -0.15cm)$) {\textsf{\small T5}};
+            % 0.7 - 0.8
+            \node at ($(GP)+(-0.30cm, -0.25cm)$) {\textsf{\small GPT-3.5}};
+            \node at ($(RF)+(-0.25cm, -0.25cm)$) {\textsf{\small REF-F}};
+        \end{axis}
+    \end{tikzpicture}
+}
+
+\newcommand{\scattercorpuschargreena}{
+    \begin{tikzpicture}
+        \begin{axis}[
+                xmin = 0.265,
+                xmax = 0.665,
+                ymin = 91.9,
+                ymax = 94.6,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = {charGREEN ($\beta = 1.0$)}]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.6284, 92.7777) % AMU
+                (0.5607, 92.0750) % CAMB
+                (0.5497, 93.0401) % CUUI
+                (0.4851, 93.6751) % IITB
+                (0.2999, 93.1345) % IPN
+                (0.4371, 92.1280) % NTHU
+                (0.5064, 93.1043) % PKU
+                (0.5390, 92.6597) % POST
+                (0.5660, 92.8045) % RAC
+                (0.4634, 93.4605) % SJTU
+                (0.5135, 94.1860) % UFC
+                (0.4945, 92.8580) % UMC
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.4564, 94.1802) % INPUT
+            };
+            \coordinate (AM) at (axis cs: 0.6284, 92.7777);
+            \coordinate (CA) at (axis cs: 0.5607, 92.0750);
+            \coordinate (CU) at (axis cs: 0.5497, 93.0401);
+            \coordinate (II) at (axis cs: 0.4851, 93.6751);
+            \coordinate (IN) at (axis cs: 0.4564, 94.1802);
+            \coordinate (IP) at (axis cs: 0.2999, 93.1345);
+            \coordinate (NT) at (axis cs: 0.4371, 92.1280);
+            \coordinate (PK) at (axis cs: 0.5064, 93.1043);
+            \coordinate (PO) at (axis cs: 0.5390, 92.6597);
+            \coordinate (RA) at (axis cs: 0.5660, 92.8045);
+            \coordinate (SJ) at (axis cs: 0.4634, 93.4605);
+            \coordinate (UF) at (axis cs: 0.5135, 94.1860);
+            \coordinate (UM) at (axis cs: 0.4945, 92.8580);
+            % others
+            \coordinate (AMA) at ($(AM)+( 0.00cm,  0.25cm)$);
+            \coordinate (CAA) at ($(CA)+( 0.00cm,  0.25cm)$);
+            \coordinate (CUA) at ($(CU)+( 0.00cm,  0.25cm)$);
+            \coordinate (IIA) at ($(II)+( 0.00cm,  0.25cm)$);
+            \coordinate (IPA) at ($(IP)+( 0.00cm,  0.25cm)$);
+            \coordinate (NTA) at ($(NT)+( 0.00cm,  0.25cm)$);
+            % POST RAC
+            \coordinate (POA) at ($(PO)+( 0.50cm, -0.20cm)$);
+            \coordinate (RAA) at ($(RA)+( 0.40cm, -0.10cm)$);
+            % INPUT UFC
+            \coordinate (INA) at ($(IN)+(-0.10cm,  0.25cm)$);
+            \coordinate (UFA) at ($(UF)+( 0.10cm,  0.25cm)$);
+            % SJTU
+            \coordinate (SJA) at ($(SJ)+(-0.20cm,  0.25cm)$);
+            % PKU UMC
+            \coordinate (PKA) at ($(PK)+(-0.50cm,  0.05cm)$);
+            \coordinate (UMA) at ($(UM)+(-0.50cm,  0.05cm)$);
+            \coords
+            \node[anchor=west] at (0.2cm, 3.5cm) {\small $r$=-0.224};
+            \node[anchor=west] at (0.2cm, 3.1cm) {\small $\rho$=-0.423};
+        \end{axis}
+    \end{tikzpicture}
+}
+
+\newcommand{\scattercorpuschargreenb}{
+        \begin{tikzpicture}
+            \begin{axis}[
+                xmin = 0.265,
+                xmax = 0.665,
+                ymin = 90.65,
+                ymax = 91.80,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = {charGREEN ($\beta = 2.0$)}]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.6284, 91.4802) % AMU
+                (0.5607, 91.6418) % CAMB
+                (0.5497, 91.6107) % CUUI
+                (0.4851, 90.8899) % IITB
+                (0.2999, 90.7354) % IPN
+                (0.4371, 90.9784) % NTHU
+                (0.5064, 91.2358) % PKU
+                (0.5390, 91.3656) % POST
+                (0.5660, 91.1117) % RAC
+                (0.4634, 90.9606) % SJTU
+                (0.5135, 91.0551) % UFC
+                (0.4945, 91.1544) % UMC
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.4564, 91.0024) % INPUT
+            };
+            \coordinate (AM) at (axis cs: 0.6284, 91.4802);
+            \coordinate (CA) at (axis cs: 0.5607, 91.6418);
+            \coordinate (CU) at (axis cs: 0.5497, 91.6107);
+            \coordinate (II) at (axis cs: 0.4851, 90.8899);
+            \coordinate (IN) at (axis cs: 0.4564, 91.0024);
+            \coordinate (IP) at (axis cs: 0.2999, 90.7354);
+            \coordinate (NT) at (axis cs: 0.4371, 90.9784);
+            \coordinate (PK) at (axis cs: 0.5064, 91.2358);
+            \coordinate (PO) at (axis cs: 0.5390, 91.3656);
+            \coordinate (RA) at (axis cs: 0.5660, 91.1117);
+            \coordinate (SJ) at (axis cs: 0.4634, 90.9606);
+            \coordinate (UF) at (axis cs: 0.5135, 91.0551);
+            \coordinate (UM) at (axis cs: 0.4945, 91.1544);
+            % others
+            \coordinate (AMA) at ($(AM)+( 0.00cm,  0.25cm)$);
+            \coordinate (IPA) at ($(IP)+( 0.00cm,  0.25cm)$);
+            \coordinate (POA) at ($(PO)+( 0.00cm,  0.25cm)$);
+            \coordinate (RAA) at ($(RA)+( 0.00cm,  0.25cm)$);
+            % CAMB CUUI
+            \coordinate (CAA) at ($(CA)+(-0.50cm,  0.20cm)$);
+            \coordinate (CUA) at ($(CU)+(-0.50cm,  0.00cm)$);
+            % IITB INPUT NTHU SJTU
+            \coordinate (IIA) at ($(II)+( 0.20cm, -0.25cm)$);
+            \coordinate (INA) at ($(IN)+(-0.10cm,  0.25cm)$);
+            \coordinate (NTA) at ($(NT)+(-0.55cm,  0.00cm)$);
+            \coordinate (SJA) at ($(SJ)+(-0.25cm, -0.25cm)$);
+            % PKU UFC UMC
+            \coordinate (PKA) at ($(PK)+(-0.45cm,  0.15cm)$);
+            \coordinate (UFA) at ($(UF)+( 0.20cm, -0.25cm)$);
+            \coordinate (UMA) at ($(UM)+(-0.45cm,  0.15cm)$);
+            \coords
+            \node[anchor=west] at (0.2cm, 3.5cm) {\small $r$=0.786};
+            \node[anchor=west] at (0.2cm, 3.1cm) {\small $\rho$=0.813};
+        \end{axis}
+    \end{tikzpicture}
+}
+
+\newcommand{\scattercorpusmaxmatch}{
+        \begin{tikzpicture}
+            \begin{axis}[
+                xmin = 0.265,
+                xmax = 0.665,
+                ymin = -3.0,
+                ymax = 45.0,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = M${}^2$]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.6284, 35.01) % AMU
+                (0.5607, 37.33) % CAMB
+                (0.5497, 36.79) % CUUI
+                (0.4851,  5.90) % IITB
+                (0.2999,  7.09) % IPN
+                (0.4371, 29.92) % NTHU
+                (0.5064, 25.32) % PKU
+                (0.5390, 30.88) % POST
+                (0.5660, 26.68) % RAC
+                (0.4634, 15.19) % SJTU
+                (0.5135,  7.84) % UFC
+                (0.4945, 25.37) % UMC
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.4564,  0.00) % INPUT
+            };
+            \coordinate (AM) at (axis cs: 0.6284, 35.01);
+            \coordinate (CA) at (axis cs: 0.5607, 37.33);
+            \coordinate (CU) at (axis cs: 0.5497, 36.79);
+            \coordinate (II) at (axis cs: 0.4851,  5.90);
+            \coordinate (IN) at (axis cs: 0.4564,  0.00);
+            \coordinate (IP) at (axis cs: 0.2999,  7.09);
+            \coordinate (NT) at (axis cs: 0.4371, 29.92);
+            \coordinate (PK) at (axis cs: 0.5064, 25.32);
+            \coordinate (PO) at (axis cs: 0.5390, 30.88);
+            \coordinate (RA) at (axis cs: 0.5660, 26.68);
+            \coordinate (SJ) at (axis cs: 0.4634, 15.19);
+            \coordinate (UF) at (axis cs: 0.5135,  7.84);
+            \coordinate (UM) at (axis cs: 0.4945, 25.37);
+            % others
+            \coordinate (AMA) at ($(AM)+( 0.00cm, -0.25cm)$);
+            \coordinate (IPA) at ($(IP)+( 0.00cm,  0.25cm)$);
+            \coordinate (NTA) at ($(NT)+( 0.00cm,  0.25cm)$);
+            \coordinate (SJA) at ($(SJ)+( 0.00cm,  0.25cm)$);
+            % CAMB CUUI
+            \coordinate (CAA) at ($(CA)+( 0.40cm,  0.25cm)$);
+            \coordinate (CUA) at ($(CU)+(-0.40cm,  0.25cm)$);
+            % POST RAC
+            \coordinate (POA) at ($(PO)+(-0.20cm,  0.25cm)$);
+            \coordinate (RAA) at ($(RA)+( 0.10cm,  0.25cm)$);
+            % PKU UMC
+            \coordinate (PKA) at ($(PK)+(-0.50cm, -0.25cm)$);
+            \coordinate (UMA) at ($(UM)+( 0.50cm, -0.25cm)$);
+            % IITB INPUT UFC
+            \coordinate (IIA) at ($(II)+(-0.15cm,  0.25cm)$);
+            \coordinate (INA) at ($(IN)+(-0.20cm,  0.25cm)$);
+            \coordinate (UFA) at ($(UF)+( 0.10cm,  0.25cm)$);
+            \coords
+            \node[anchor=west] at (0.2cm, 3.5cm) {\small $r$=0.623};
+            \node[anchor=west] at (0.2cm, 3.1cm) {\small $\rho$=0.687};
+        \end{axis}
+    \end{tikzpicture}
+}
+
+\newcommand{\scattercorpusptmaxmatch}{
+        \begin{tikzpicture}
+            \begin{axis}[
+                xmin = 0.265,
+                xmax = 0.665,
+                ymin = -3.0,
+                ymax = 45.0,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = PT-M${}^2$]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.6284, 35.94) % AMU
+                (0.5607, 34.37) % CAMB
+                (0.5497, 32.35) % CUUI
+                (0.4851,  4.35) % IITB
+                (0.2999,  5.72) % IPN
+                (0.4371, 21.71) % NTHU
+                (0.5064, 30.40) % PKU
+                (0.5390, 33.33) % POST
+                (0.5660, 34.36) % RAC
+                (0.4634, 10.95) % SJTU
+                (0.5135,  4.41) % UFC
+                (0.4945, 21.50) % UMC
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.4564,  0.00) % INPUT
+            };
+            \coordinate (AM) at (axis cs: 0.6284, 35.94);
+            \coordinate (CA) at (axis cs: 0.5607, 34.37);
+            \coordinate (CU) at (axis cs: 0.5497, 32.35);
+            \coordinate (II) at (axis cs: 0.4851,  4.35);
+            \coordinate (IN) at (axis cs: 0.4564,  0.00);
+            \coordinate (IP) at (axis cs: 0.2999,  5.72);
+            \coordinate (NT) at (axis cs: 0.4371, 21.71);
+            \coordinate (PK) at (axis cs: 0.5064, 30.40);
+            \coordinate (PO) at (axis cs: 0.5390, 33.33);
+            \coordinate (RA) at (axis cs: 0.5660, 34.36);
+            \coordinate (SJ) at (axis cs: 0.4634, 10.95);
+            \coordinate (UF) at (axis cs: 0.5135,  4.41);
+            \coordinate (UM) at (axis cs: 0.4945, 21.50);
+            % others
+            \coordinate (AMA) at ($(AM)+( 0.00cm,  0.25cm)$);
+            \coordinate (IPA) at ($(IP)+( 0.00cm,  0.25cm)$);
+            \coordinate (PKA) at ($(PK)+(-0.45cm,  0.05cm)$);
+            \coordinate (SJA) at ($(SJ)+( 0.00cm,  0.25cm)$);
+            % CAMB CUUI POST RAC
+            \coordinate (CAA) at ($(CA)+( 0.10cm,  0.25cm)$);
+            \coordinate (CUA) at ($(CU)+(-0.10cm, -0.25cm)$);
+            \coordinate (POA) at ($(PO)+(-0.50cm,  0.15cm)$);
+            \coordinate (RAA) at ($(RA)+( 0.40cm, -0.25cm)$);
+            % IITB INPUT UFC
+            \coordinate (IIA) at ($(II)+(-0.15cm,  0.25cm)$);
+            \coordinate (INA) at ($(IN)+(-0.20cm,  0.25cm)$);
+            \coordinate (UFA) at ($(UF)+( 0.15cm,  0.25cm)$);
+            % NTHU UMC
+            \coordinate (NTA) at ($(NT)+(-0.05cm,  0.25cm)$);
+            \coordinate (UMA) at ($(UM)+( 0.05cm,  0.25cm)$);
+            \coords
+            \node[anchor=west] at (0.2cm, 3.5cm) {\small $r$=0.686};
+            \node[anchor=west] at (0.2cm, 3.1cm) {\small $\rho$=0.786};
+        \end{axis}
+    \end{tikzpicture}
+}
+
+\newcommand{\scattersentmaxmatch}{
+        \begin{tikzpicture}
+            \begin{axis}[
+                xmin = 0.265,
+                xmax = 0.665,
+                ymin = 22.0,
+                ymax = 43.0,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = M${}^2$]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.6284, 38.36) % AMU
+                (0.5607, 35.81) % CAMB
+                (0.5497, 39.77) % CUUI
+                (0.4851, 31.70) % IITB
+                (0.2999, 23.94) % IPN
+                (0.4371, 34.46) % NTHU
+                (0.5064, 33.93) % PKU
+                (0.5390, 35.24) % POST
+                (0.5660, 34.08) % RAC
+                (0.4634, 32.46) % SJTU
+                (0.5135, 32.40) % UFC
+                (0.4945, 32.51) % UMC
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.4564, 31.33) % INPUT
+            };
+            \coordinate (AM) at (axis cs: 0.6284, 38.36);
+            \coordinate (CA) at (axis cs: 0.5607, 35.81);
+            \coordinate (CU) at (axis cs: 0.5497, 39.77);
+            \coordinate (II) at (axis cs: 0.4851, 31.70);
+            \coordinate (IN) at (axis cs: 0.4564, 31.33);
+            \coordinate (IP) at (axis cs: 0.2999, 23.94);
+            \coordinate (NT) at (axis cs: 0.4371, 34.46);
+            \coordinate (PK) at (axis cs: 0.5064, 33.93);
+            \coordinate (PO) at (axis cs: 0.5390, 35.24);
+            \coordinate (RA) at (axis cs: 0.5660, 34.08);
+            \coordinate (SJ) at (axis cs: 0.4634, 32.46);
+            \coordinate (UF) at (axis cs: 0.5135, 32.40);
+            \coordinate (UM) at (axis cs: 0.4945, 32.51);
+            % others
+            \coordinate (AMA) at ($(AM)+( 0.00cm,  0.25cm)$);
+            \coordinate (CUA) at ($(CU)+( 0.00cm,  0.25cm)$);
+            \coordinate (IPA) at ($(IP)+( 0.00cm,  0.25cm)$);
+            \coordinate (PKA) at ($(PK)+(-0.45cm,  0.15cm)$);
+            \coordinate (POA) at ($(PO)+(-0.25cm,  0.25cm)$);
+            %
+            \coordinate (NTA) at ($(NT)+(-0.60cm,  0.05cm)$);
+            \coordinate (SJA) at ($(SJ)+(-0.55cm,  0.05cm)$);
+            \coordinate (INA) at ($(IN)+(-0.65cm, -0.15cm)$);
+            %
+            \coordinate (CAA) at ($(CA)+( 0.60cm,  0.05cm)$);
+            \coordinate (RAA) at ($(RA)+( 0.50cm,  0.05cm)$);
+            %
+            \coordinate (UFA) at ($(UF)+( 0.50cm, -0.05cm)$);
+            \coordinate (IIA) at ($(II)+( 0.00cm, -0.25cm)$);
+            \coordinate (UMA) at ($(UM)+( 0.70cm, -0.70cm)$);
+            \draw[-{Latex[round]}] ($(UM)+(0.50cm, -0.50cm)$) -- ($(UM)+(0.10cm, -0.10cm)$);
+            \coords
+            \node[anchor=west] at (0.2cm, 3.5cm) {\small $r$=0.872};
+            \node[anchor=west] at (0.2cm, 3.1cm) {\small $\rho$=0.731};
+        \end{axis}
+    \end{tikzpicture}
+}
+
+\newcommand{\scattersentchargreenb}{
+        \begin{tikzpicture}
+            \begin{axis}[
+                xmin = 0.265,
+                xmax = 0.665,
+                ymin = 91.10,
+                ymax = 92.20,
+                width = \conllwidth,
+                height = \conllheight,
+                xlabel near ticks, xlabel shift={0pt},
+                ylabel near ticks, ylabel shift={0pt},
+                xlabel = Human,
+                ylabel = {charGREEN ($\beta = 2.0$)}]
+            \addplot[only marks, mark=*, draw=blue, color=blue] coordinates{
+                (0.6284, 91.9880) % AMU
+                (0.5607, 91.9630) % CAMB
+                (0.5497, 92.0648) % CUUI
+                (0.4851, 91.3406) % IITB
+                (0.2999, 91.1785) % IPN
+                (0.4371, 91.4234) % NTHU
+                (0.5064, 91.7390) % PKU
+                (0.5390, 91.8995) % POST
+                (0.5660, 91.6358) % RAC
+                (0.4634, 91.4052) % SJTU
+                (0.5135, 91.5674) % UFC
+                (0.4945, 91.6243) % UMC
+            };
+            \addplot[only marks, mark=*, draw=red, color=red] coordinates{
+                (0.4564, 91.5061) % INPUT
+            };
+            \coordinate (AM) at (axis cs: 0.6284, 91.9880);
+            \coordinate (CA) at (axis cs: 0.5607, 91.9630);
+            \coordinate (CU) at (axis cs: 0.5497, 92.0648);
+            \coordinate (II) at (axis cs: 0.4851, 91.3406);
+            \coordinate (IN) at (axis cs: 0.4564, 91.5061);
+            \coordinate (IP) at (axis cs: 0.2999, 91.1785);
+            \coordinate (NT) at (axis cs: 0.4371, 91.4234);
+            \coordinate (PK) at (axis cs: 0.5064, 91.7390);
+            \coordinate (PO) at (axis cs: 0.5390, 91.8995);
+            \coordinate (RA) at (axis cs: 0.5660, 91.6358);
+            \coordinate (SJ) at (axis cs: 0.4634, 91.4052);
+            \coordinate (UF) at (axis cs: 0.5135, 91.5674);
+            \coordinate (UM) at (axis cs: 0.4945, 91.6243);
+            % others
+            \coordinate (AMA) at ($(AM)+( 0.00cm,  0.25cm)$);
+            \coordinate (CAA) at ($(CA)+(-0.60cm,  0.05cm)$);
+            \coordinate (CUA) at ($(CU)+(-0.60cm,  0.05cm)$);
+            \coordinate (IIA) at ($(II)+( 0.45cm,  0.00cm)$);
+            \coordinate (INA) at ($(IN)+(-0.60cm,  0.10cm)$);
+            \coordinate (IPA) at ($(IP)+( 0.00cm,  0.25cm)$);
+            \coordinate (NTA) at ($(NT)+(-0.60cm,  0.05cm)$);
+            \coordinate (PKA) at ($(PK)+(-0.50cm,  0.10cm)$);
+            \coordinate (POA) at ($(PO)+(-0.60cm, -0.05cm)$);
+            \coordinate (RAA) at ($(RA)+( 0.00cm,  0.25cm)$);
+            \coordinate (SJA) at ($(SJ)+(-0.30cm, -0.25cm)$);
+            \coordinate (UFA) at ($(UF)+( 0.00cm, -0.25cm)$);
+            \coordinate (UMA) at ($(UM)+(-0.50cm,  0.10cm)$);
+            \coords
+            \node[anchor=west] at (0.2cm, 3.5cm) {\small $r$=0.834};
+            \node[anchor=west] at (0.2cm, 3.1cm) {\small $\rho$=0.852};
+        \end{axis}
+    \end{tikzpicture}
+}

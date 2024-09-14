@@ -1,0 +1,756 @@
+% This must be in the first 5 lines to tell arXiv to use pdfLaTeX, which is strongly recommended.
+\pdfoutput=1
+% In particular, the hyperref package requires pdfLaTeX in order to break URLs across lines.
+
+\documentclass[11pt]{article}
+
+% Change "review" to "final" to generate the final (sometimes called camera-ready) version.
+% Change to "preprint" to generate a non-anonymous version with page numbers.
+%\usepackage[review]{acl}
+\usepackage{acl}
+
+% Standard package includes
+\usepackage{times}
+\usepackage{latexsym}
+
+% For proper rendering and hyphenation of words containing Latin characters (including in bib files)
+\usepackage[T1]{fontenc}
+% For Vietnamese characters
+% \usepackage[T5]{fontenc}
+% See https://www.latex-project.org/help/documentation/encguide.pdf for other character sets
+
+% This assumes your files are encoded as UTF8
+\usepackage[utf8]{inputenc}
+
+% This is not strictly necessary, and may be commented out,
+% but it will improve the layout of the manuscript,
+% and will typically save some space.
+\usepackage{microtype}
+
+% This is also not strictly necessary, and may be commented out.
+% However, it will improve the aesthetics of text in
+% the typewriter font.
+\usepackage{inconsolata}
+
+%Including images in your LaTeX document requires adding
+%additional package(s)
+\usepackage{graphicx}
+
+% If the title and author information does not fit in the area allocated, uncomment the following
+%
+%\setlength\titlebox{<dim>}
+%
+% and set <dim> to something 5cm or larger.
+
+\title{$n$-gram $F$-score for Evaluating Grammatical Error Correction}
+
+\author{
+    Shota Koyama\textsuperscript{1,2},
+    Ryo Nagata\textsuperscript{3},
+    Hiroya Takamura\textsuperscript{2},
+    Naoaki Okazaki\textsuperscript{1,2} \\
+    \textsuperscript{1}Tokyo Institute of Technology \\
+    \textsuperscript{2}National Institute of Advanced Industrial Science and Technology
+    \textsuperscript{3}Konan University \\
+    \texttt{shota.koyama@nlp.c.titech.ac.jp},
+    \texttt{nagata-inlg2024@ml.hyogo-u.ac.jp}, \\
+    \texttt{takamura.hiroya@aist.go.jp},
+    \texttt{okazaki@c.titech.ac.jp}
+}
+
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{enumitem} % noitemsep, nolistsep
+\usepackage{graphics,graphicx} % includegraphics
+\usepackage{mathtools}
+\usepackage{multirow}
+\usepackage{pgfplots}
+\usepackage{tablefootnote}
+\usepackage{tikz}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows.meta}
+\newcommand{\forallngramx}{\forall n\mathchar`-\mathrm{gram}\ x}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+M${}^2$ and its variants are the most widely used automatic evaluation metrics for grammatical error correction~(GEC), which calculate an $F$-score using a phrase-based alignment between sentences.
+However, it is not straightforward at all to align learner sentences containing errors to their correct sentences. In addition, alignment calculations are computationally expensive.
+We propose \emph{GREEN}, an alignment-free $F$-score for GEC evaluation.
+GREEN treats a sentence as a multiset of $n$-grams and extracts edits between sentences by set operations instead of computing an alignment.
+Our experiments confirm that GREEN performs better than existing methods for the corpus-level metrics and comparably for the sentence-level metrics even without computing an alignment.
+GREEN is available at \url{https://github.com/shotakoyama/green}.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:introduction}
+
+Grammatical error correction~(GEC) is one of text generation tasks that aims to convert erroneous texts into error-corrected ones.
+Because of promising applications in second language learning, GEC has attracted widespread attention from the NLP community~\citep{chollampatt-ng-2018-neural,zhao-etal-2019-improving,sun-etal-2021-instantaneous,kaneko-etal-2022-interpretability,zhou-etal-2023-improving-seq2seq}.
+Various automatic evaluation metrics for GEC have been proposed to make evaluations cheaper and faster by avoiding high-cost human evaluations.
+
+M${}^2$~\citep{dahlmeier-ng-2012-better} and its variants are the most widely used metrics in the automatic evaluation for GEC.
+They first compute a phrase-based alignment between sentences to extract edits of correction.
+They then calculate an $F$-score by comparing edits from the source to the reference sentences and edits from the source to the corrected sentences.
+The CoNLL-2014 shared task of GEC adopted M${}^2$ as its evaluation metric, and the BEA-2019 shared task adopted ERRANT~\citep{bryant-etal-2017-automatic}, one of the variants of M${}^2$. Currently, they are the representative metrics for GEC.
+
+However, it is not straightforward at all to align source sentences (learner sentences containing errors) to their target sentences (correct sentences). 
+In addition, the alignment calculation is computationally expensive and time-consuming for long sentences with many edits from the source sentence.
+Furthermore, M${}^2$ requires manually annotated data with edits from the source to the reference sentences to extract edits; ERRANT needs no manually annotated data but depends on a part-of-speech tagger to perform the alignment calculation.
+Supposing that we could extract edits between sentences without alignments, we would design a more practical and useful alignment-free evaluation method that achieves the same level of performance as M${}^2$ and ERRANT without depending on additional data or tools to extract the alignment.
+
+In this paper, we propose GREEN, an \textbf{alignment-free} $F$-score for GEC evaluation, which treats a sentence as $n$-gram occurrences using a multiset (a set with repeated elements) of $n$-grams to compute an $F$-score by comparing edits between two multisets.
+We conducted experiments to verify the effectiveness of GREEN on the CoNLL-2014 evaluation dataset~\citep{grundkiewicz-etal-2015-human} and the SEEDA dataset~\citep{10.1162/tacl_a_00676}.
+Even without computing an alignment, GREEN exhibits a higher correlation with human evaluation in terms of both Pearson and Spearman correlation coefficients for the corpus-level metrics. It also achieves comparable performance with existing methods for the sentence-level metrics.
+
+\section{Related Work}
+\label{sec:related_work}
+
+We review five existing representative reference-based metrics for GEC.
+M${}^2$, ERRANT, PT-M${}^2$, and CLEME are alignment-based $F$-scores.
+GLEU is a metric based on $n$-gram precision.
+
+\subsection{M${}^2$~\citep{dahlmeier-ng-2012-better}}
+\label{sec:m2}
+
+M${}^2$ is the earliest and most representative GEC-specific automatic evaluation metric.
+M${}^2$ calculates an $F_{\beta}$-score by comparing the system-corrected edits against human-annotated reference edits.
+Since the corrected sentences are not annotated with edits, M${}^2$ automatically explores the corrected edits that have maximum overlaps with reference edits.
+This is the advantage of M${}^2$ because we do not need to conduct manual annotations for system outputs once the reference annotations are provided.
+
+One of the issues with M${}^2$ is time complexity.
+M${}^2$ finds the shortest path of a directed acyclic graph.
+Let the number of tokens in the source, reference, and corrected sentence be less than or equal to $k$.
+The bottleneck in the average case lies in the graph pruning algorithm to calculate the optimal alignment, which requires the $O(k^2)$ time complexity.
+However, in the worst case, when no nodes are pruned in this process, the numbers of nodes $V$ and edges $E$ are constant multiples of $k^2$ and $k^4$.
+Since topological sort requires $O(V + E)$ time complexity to find the shortest path, M${}^2$ requires $O(k^4)$ in the worst case.
+The official implementation in the CoNLL-2014 shared task adopts the Bellman-Ford algorithm, which has a time complexity of $O(VE)$, resulting in the worst-case time complexity of $O(k^6)$. 
+In this paper, we adopted the faster implementation\footnote{\url{https://github.com/craggy-otake/m2scorer_python3_fast}} using topological sort.
+
+Another issue is the inability to properly evaluate systems that generate corrupted sentences~\citep{felice-briscoe-2015-towards}.
+M${}^2$ gives $F=0$ to a system that makes no changes to system-corrected sentences because M${}^2$ calculates scores based on alignments.
+For this reason, M${}^2$ may evaluate a system that generates outputs that are worse than the source text as $F \geq 0$.
+This is a common problem for other alignment-based $F$-score methods that are variants of M${}^2$.
+
+\subsection{ERRANT~\citep{bryant-etal-2017-automatic}}
+\label{sec:errant}
+
+ERRANT computes an $F$-score by comparing the edits on the reference and corrected sentences similarly to M${}^2$.
+ERRANT automatically extracts edits for both reference and corrected sentences using the linguistically enhanced alignment algorithm~\citep{felice-etal-2016-automatic} based on the spaCy part-of-speech tagger and Damerau-Levenshtein distance, with time complexity of $O(k^2)$.
+The unnecessity of manually annotated reference edits is an advantage of ERRANT.
+We used the official implementation \texttt{v3.0.0}\footnote{\mbox{\url{https://github.com/chrisjbryant/errant}}}.
+
+\subsection{PT-M${}^2$~\citep{gong-etal-2022-revisiting}}
+\label{sec:ptm2}
+
+PT-M${}^2$ is a method that incorporates a pre-trained model into M${}^2$.
+PT-M${}^2$ calculates a score using BERT~\citep{devlin-etal-2019-bert} for edits extracted by M${}^2$.
+M${}^2$ gives a weight of 1 to each edit regardless of the impact of the edit, but PT-M${}^2$ weights the edits by score, thus enabling it to give higher scores to corrected sentences containing more important corrections.
+We used the official implementation\footnote{\url{https://github.com/pygongnlp/PT-M2}}.
+
+\subsection{CLEME~\citep{ye-etal-2023-cleme}}
+\label{sec:cleme}
+
+The original ERRANT equally evaluates edits of long and short phrases, resulting in unfair evaluations.
+CLEME performs edit extraction using ERRANT and evaluates the edits with length weighting.
+This length weighting gives larger weights to longer edits to prevent unfairness in the edit evaluation.
+We used the official implementation\footnote{\url{https://github.com/THUKElab/CLEME}}.
+
+\subsection{GLEU~\citep{napoles-etal-2015-ground, napoles2016gleu}}
+\label{sec:gleu}
+
+BLEU~\citep{papineni-etal-2002-bleu}, which is an $n$-gram-based metric for machine translation, shows a negative correlation on the CoNLL-2014 dataset~\citep{grundkiewicz-etal-2015-human}.
+GLEU is designed by adding a penalty term to the BLEU formula to show a positive correlation with human evaluation.
+GLEU is an $O(k)$ algorithm because it is an $n$-gram-based method.
+However, GLEU iterates 500 times to randomly sample one of the multiple references for each sentence, which makes the execution time of GLEU longer.
+In this paper, GLEU refers to the revised formula in \citet{napoles2016gleu} and we explain this formula in Section~\ref{sec:reformulation}.
+We adopted our reimplementation\footnote{This is because the original version is implemented in Python2.}.
+
+\section{Proposed Method: GREEN}
+\label{sec:method}
+
+First, we describe GREEN with one reference sentence in Section~\ref{sec:single_reference}.
+We will extend GREEN for multiple references in Section~\ref{sec:multiple_references}.
+
+\subsection{GREEN for Single Reference}
+\label{sec:single_reference}
+
+\begin{figure}[!t]
+    \centering
+    \begin{tikzpicture}[transform shape, scale=0.90]
+        \draw ( 90:1.2) circle (2.0);
+        \draw (210:1.2) circle (2.0);
+        \draw (330:1.2) circle (2.0);
+        \node[anchor=south,overlay] at ($(90: 2.5)+(-2.7, -0.00)$) {Source $S$};
+        \node[anchor=south,overlay] at ($(90: 2.5)+(-3.0, -0.50)$) {``\textit{What is you ?}''};
+        \node[anchor=east,overlay] at ($(210: 2.5)+(-0.10, -1.00)$) {Reference $R$};
+        \node[anchor=east,overlay] at ($(210: 2.5)+( 0.15, -1.50)$) {``\textit{Who are you ?}''};
+        \node[anchor=west,overlay] at ($(330: 2.5)+( 0.10, -1.00)$) {Correction $C$};
+        \node[anchor=west,overlay] at ($(330: 2.5)+(-0.05, -1.50)$) {``\textit{Who is you !}''};
+        \node at ($(  0: 0.0)+( 0.00, 0.45)$) {\textit{you}};
+        \node at ($(  0: 0.0)+( 0.00, 0.05)$) {\small\textsf{True}};
+        \node at ($(  0: 0.0)+( 0.00,-0.35)$) {\small\textsf{Keep}};
+        \node at ($(  0: 0.0)+(-0.50,-0.15)$) {\scalebox{1}[2.25]{\small(}};
+        \node at ($(  0: 0.0)+( 0.50,-0.15)$) {\scalebox{1}[2.25]{\small)}};
+        \node at ($( 90: 2.0)+( 0.00, 0.20)$) {\textit{What}};
+        \node at ($( 90: 2.0)+( 0.00,-0.20)$) {\small(\textsf{True Delete})};
+        \node at ($(150: 1.2)+(-0.20,-0.30)$) {\textit{?}};
+        \node at ($(150: 1.2)+(-0.15, 0.50)$) {\small\textsf{Over-}};
+        \node at ($(150: 1.2)+(-0.15, 0.20)$) {\small\textsf{Delete}};
+        \node at ($(150: 1.2)+(-0.70, 0.35)$) {\scalebox{1}[2.1]{\small(}};
+        \node at ($(150: 1.2)+( 0.40, 0.35)$) {\scalebox{1}[2.1]{\small)}};
+        \node at ($(210: 2.0)+( 0.00, 0.25)$) {\textit{are}};
+        \node at ($(210: 2.0)+(-0.10,-0.20)$) {\small\textsf{Under-}};
+        \node at ($(210: 2.0)+(-0.10,-0.60)$) {\small\textsf{Insert}};
+        \node at ($(210: 2.0)+(-0.70,-0.40)$) {\scalebox{1}[2.25]{(}};
+        \node at ($(210: 2.0)+( 0.50,-0.40)$) {\scalebox{1}[2.25]{)}};
+        \node at ($(270: 1.2)+( 0.00, 0.20)$) {\textit{Who}};
+        \node at ($(270: 1.2)+( 0.00,-0.15)$) {\small\textsf{True}};
+        \node at ($(270: 1.2)+( 0.00,-0.45)$) {\small\textsf{Insert}};
+        \node at ($(270: 1.2)+(-0.50,-0.30)$) {\scalebox{1}[2.1]{(}};
+        \node at ($(270: 1.2)+( 0.50,-0.30)$) {\scalebox{1}[2.1]{)}};
+        \node at ($(330: 2.0)+( 0.00, 0.25)$) {\textit{!}};
+        \node at ($(330: 2.0)+( 0.10,-0.20)$) {\small\textsf{Over-}};
+        \node at ($(330: 2.0)+( 0.10,-0.60)$) {\small\textsf{Insert}};
+        \node at ($(330: 2.0)+(-0.45,-0.40)$) {\scalebox{1}[2.25]{(}};
+        \node at ($(330: 2.0)+( 0.65,-0.40)$) {\scalebox{1}[2.25]{)}};
+        \node at ($( 30: 1.2)+( 0.20,-0.30)$) {\textit{is}};
+        \node at ($( 30: 1.2)+( 0.15, 0.50)$) {\small\textsf{Under-}};
+        \node at ($( 30: 1.2)+( 0.15, 0.20)$) {\small\textsf{Delete}};
+        \node at ($( 30: 1.2)+(-0.45, 0.35)$) {\scalebox{1}[2.1]{\small(}};
+        \node at ($( 30: 1.2)+( 0.75, 0.35)$) {\scalebox{1}[2.1]{\small)}};
+    \end{tikzpicture}
+    \begin{tabular}{rllll}
+        \vspace*{0.0em} \\
+        Source $S$: & \textit{What} & \textit{is} & \textit{you} & \textit{?} \\
+        Reference $R$: & \textit{Who} & \textit{are} & \textit{you} & \textit{?} \\
+        Correction $C$: & \textit{Who} & \textit{is} & \textit{you} & \textit{!}
+    \end{tabular}
+    \caption{A three-set Venn diagram shows the occurrence of word 1-grams of $S, R, C$.}
+    \label{fig:Who_are_you_?}
+\end{figure}
+
+GREEN treats a sentence as a multiset of $n$-grams with the maximum $n$-gram size $N$.
+For example, a sentence ``\textit{a a b}'' is treated as a multiset $\{\textit{a}, \textit{a}, \textit{b}, \textit{a-a}, \textit{a-b}\}$\footnote{In this paper, $n$-grams are represented by connecting each word with a hyphen instead of a whitespace to avoid confusing $n$-gram with sentence.} when we set $N = 2$\footnote{Thus \textit{a-a-b} is not included in this multiset.}.
+GREEN considers the difference between multisets of $n$-grams as a correction.
+Corrections can be classified into deletion, insertion, and keep.
+For example, corrections from $\{\textit{a}, \textit{c}\}$ to $\{\textit{b}, \textit{c}\}$ involves deletion of \textit{a}, which decreases the number of words, insertion of \textit{b}, which increases the number of words, and keep of \textit{c}, which does not change the word count\footnote{In GREEN, correction does not involve substitution. Substitution in alignment-based metrics corresponds to a combination of deletion and insertion in GREEN.}.
+
+GREEN compares the match between the corrections from the source sentence $S$ to the reference sentence $R$ and the corrections from $S$ to the corrected sentence $C$.
+To count the match between $S \to R$ and $S \to C$, we introduce a Venn diagram illustrating the occurrences of word $n$-grams in $S, R, C$ in Figure~\ref{fig:Who_are_you_?}\footnote{We do not show $n$-grams of lengths two or more for simplicity in the Venn diagram.}.
+Table~\ref{tab:classification} shows what types of corrections are performed in $S \to R$ and $S \to C$, respectively, for all $n$-grams in each region of this Venn diagram.
+For example, the region $S \cap \overline{R} \cap \overline{C}$ contains $n$-grams that appear in $S$ but not in $R$ and $C$, such as ``\textit{What}''.
+We call this region \textsf{True Delete}~(\textsf{TD}) because these $n$-grams are correctly deleted through $S \to R$ and $S \to C$.
+Similarly, the region $\overline{S} \cap R \cap C$ containing $n$-grams inserted in both $S \to R$ and $S \to C$ is called \textsf{True Insert}~(\textsf{TI}) and the region $S \cap R \cap C$ containing $n$-grams kept in both $S \to R$ and $S \to C$ is called \textsf{True Keep}~(\textsf{TK}).
+\textsf{TD}, \textsf{TI}, and \textsf{TK} are \textsf{True Positive}~(\textsf{TP}) because both $S \to R$ and $S \to C$ take the same type of corrections.
+The regions $S \cap R \cap \overline{C}$ and $\overline{S} \cap \overline{R} \cap C$ contain $n$-grams that are not deleted or inserted in $S \to R$, but are excessively deleted or inserted in $S \to C$.
+We call them \textsf{Over-Delete}~(\textsf{OD}) and \textsf{Over-Insert}~(\textsf{OI}), respectively.
+The elements in \textsf{OD} and \textsf{OI} are \textsf{False Positive}~(\textsf{FP}) because they are mistakenly deleted or inserted in $S \to C$.
+The regions $S \cap \overline{R} \cap C$ and $\overline{S} \cap R \cap \overline{C}$ contain $n$-grams that should have been deleted or inserted in $S \to C$ as they are deleted or inserted in $S \to R$.
+We call them \textsf{Under-Delete}~(\textsf{UD}) and \textsf{Under-Insert}~(\textsf{UI}), respectively.
+The elements in \textsf{UD} and \textsf{UI} are \textsf{False Negative}~(\textsf{FN}) because they should have been deleted or inserted in $S \to C$.
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{l|l|ll}
+        \hline
+        Region & Name & $S \to R$ & $S \to C$ \\
+        \hline
+        $S \cap \overline{R} \cap \overline{C} $ & \textsf{True Delete} & Delete & Delete \\
+        $\overline{S} \cap R \cap C$ & \textsf{True Insert} & Insert & Insert \\
+        $S \cap R \cap C$ & \textsf{True Keep} & Keep & Keep \\
+        \hline
+        $S \cap R \cap \overline{C}$ & \textsf{Over-Delete} & Keep & Delete \\
+        $\overline{S} \cap \overline{R} \cap C$ & \textsf{Over-Insert} & None & Insert \\
+        \hline
+        $S \cap \overline{R} \cap C$ & \textsf{Under-Delete} & Delete & Keep \\
+        $\overline{S} \cap R \cap \overline{C}$ & \textsf{Under-Insert} & Insert & None \\
+        \hline
+    \end{tabular}
+    \caption{A table describes each region in Figure~\ref{fig:Who_are_you_?}. Correction in which no $n$-gram appears in the common region involves ``None''.}
+    \label{tab:classification}
+\end{table}
+
+Next, we explain how to calculate the number of $n$-grams in each region of the Venn diagram by the operations on multisets.
+In this paper, we use three operations on multisets: intersection~($\cap$), union~($\cup$), and difference~($\setminus$).
+Each operation on multisets $A$ and $B$ is defined concerning the multiplicity of any element $x$ in $A$ and $B$.
+The multiplicity of an element $x$ in a multiset $A$, which is denoted as $m_A (x)$, represents the number of times $x$ occurs in $A$.
+For example, 
+$m_A(\textit{a}) = 2$ and
+$m_A(\textit{a-a}) = 1$
+when $A = \{\textcolor{red}{\textbf{\textit{a}}}, \textcolor{red}{\textbf{\textit{a}}}, \textit{b}, \textcolor{red}{\textbf{\textit{a-a}}}, \textit{a-b}\}$.
+In this paper, we define the three operations above as follows:
+\begingroup
+\allowdisplaybreaks
+\begin{align*}
+    m_{A \cap B} (x) & = \min (m_A (x), m_B (x)), \\
+    m_{A \cup B} (x) & = \max (m_A (x), m_B (x)), \\
+    m_{A \setminus B} (x) & = \max (m_A (x) - m_B (x), 0).
+\end{align*}
+\endgroup
+Hence, the number of $n$-gram $x$ included in each region of the Venn diagram in Figure~\ref{fig:Who_are_you_?} is represented as follows:
+\begingroup
+\allowdisplaybreaks
+\begin{align}
+    & \textsf{TD}_{S, R, C} (x) 
+    = m_{S \cap \overline{R} \cap \overline{C}} (x)
+    = m_{S \setminus (R \cup C)} (x) \nonumber \\ 
+    = & \max\{m_S (x) \scalebox{1}[1]{\ensuremath{-}} \max(m_R (x), m_C (x)), 0\}, \label{eq:true_delete}
+    \\[2\jot]
+    & \textsf{TI}_{S, R, C} (x)
+    = m_{\overline{S} \cap R \cap C} (x)
+    = m_{(R \cap C) \setminus S} (x) \nonumber \\
+    = & \max\{\min(m_R (x), m_C (x)) - m_S (x), 0\}, \label{eq:true_insert} \\[2\jot]
+    & \textsf{TK}_{S, R, C} (x)
+    = m_{S \cap R \cap C}(x) \nonumber \\
+    = & \min(m_S(x), m_R(x), m_C (x)), \label{eq:true_keep}
+    \\[2\jot]
+    & \textsf{OD}_{S, R, C} (x)
+    = m_{S \cap R \cap \overline{C}} (x)
+    = m_{(S \cap R) \setminus C} (x) \nonumber \\
+    = & \max\{\min(m_S (x), m_R (x)) - m_C (x), 0\}, \label{eq:over_delete} \\[2\jot]
+    & \textsf{OI}_{S, R, C} (x)
+    = m_{\overline{S} \cap \overline{R} \cap C} (x)
+    = m_{C \setminus (S \cup R)} (x) \nonumber \\
+    = & \max\{m_C (x) \scalebox{1}[1]{\ensuremath{-}} \max(m_S (x), m_R (x)), 0\}, \label{eq:over_insert}
+    \\[2\jot]
+    & \textsf{UD}_{S, R, C} (x)
+    = m_{S \cap \overline{R} \cap C} (x)
+    = m_{(S \cap C) \setminus R} (x) \nonumber \\
+    = & \max\{\min(m_S (x), m_C (x)) - m_R (x), 0\}, \label{eq:under_delete}
+    \\[2\jot]
+    & \textsf{UI}_{S, R, C} (x)
+    = m_{\overline{S} \cap R \cap \overline{C}} (x)
+    = m_{R \setminus (S \cup C)} (x) \nonumber \\
+    = & \max\{m_R (x) \scalebox{1}[1]{\ensuremath{-}} \max(m_S (x), m_C (x)), 0\}. \label{eq:under_insert}
+\end{align}
+\endgroup
+
+GREEN calculates \textsf{TP}, \textsf{FP}, and \textsf{FN} for each $n$-gram size.
+The \textsf{TP}, \textsf{FP}, and \textsf{FN} of $n$-grams for $S, R, C$ are calculated as follows:
+\begingroup
+\allowdisplaybreaks
+\begin{align*}
+    & \textsf{TP}_{n, S, R, C} \\
+    = & \sum_{\mathclap{\forallngramx}}
+    \left( \textsf{TD}_{S,R,C} (x) + \textsf{TI}_{S,R,C} (x) + \textsf{TK}_{S,R,C} (x) \right), \\
+    & \textsf{FP}_{n, S, R, C}
+    = \sum_{\mathclap{\forallngramx}}
+    \left( \textsf{OD}_{S,R,C} (x) + \textsf{OI}_{S,R,C} (x) \right), \\
+    & \textsf{FN}_{n, S, R, C}
+    = \sum_{\mathclap{\forallngramx}}
+    \left( \textsf{UD}_{S,R,C} (x) + \textsf{UI}_{S,R,C} (x) \right).
+\end{align*}
+\endgroup
+
+Finally, GREEN accumulates \textsf{TP}, \textsf{FP}, and \textsf{FN} for corpus-level to obtain an $F$ score.
+$\mathbb{S} = (S_1, \ldots, S_D), \mathbb{R} = (R_1, \ldots, R_D), \mathbb{C} = (C_1, \ldots, C_D)$ denote a set of $D$ source, reference, and corrected sentences respectively.
+GREEN calculates precision and recall for $n$-gram lengths from $1$ to $N$ and the geometric mean of these precisions and recalls as BLEU~\citep{papineni-etal-2002-bleu} does.
+\begingroup
+\allowdisplaybreaks
+\begin{align*}
+    & \mathrm{prec} (N, \mathbb{S}, \mathbb{R}, \mathbb{C}) \\[-2\jot]
+    = & \left( \prod_{n=1}^{N}
+    \frac{
+        \sum_{i=1}^{D} \textsf{TP}_{n, S_i, R_i, C_i}
+    }{
+        \sum_{i=1}^{D} \left( \textsf{TP}_{n, S_i, R_i, C_i} + \textsf{FP}_{n, S_i, R_i, C_i} \right)
+    }
+    \right)^{\tfrac{1}{N}}, \\[3\jot]
+    & \mathrm{recall} (N, \mathbb{S}, \mathbb{R}, \mathbb{C}) \\[-2\jot]
+    = & \left( \prod_{n=1}^{N}
+    \frac{
+        \sum_{i=1}^{D} \textsf{TP}_{n, S_i, R_i, C_i}
+    }{
+        \sum_{i=1}^{D} \left( \textsf{TP}_{n, S_i, R_i, C_i} + \textsf{FN}_{n, S_i, R_i, C_i} \right)
+    }
+    \right)^{\tfrac{1}{N}}.
+\end{align*}
+\endgroup
+At last, we calculate an $F_{\beta}$ score as follows:
+\begingroup
+\allowdisplaybreaks
+\begin{align*}
+    & F_{\beta} (N, \mathbb{S}, \mathbb{R}, \mathbb{C}) \\
+    = &
+    \frac{
+        (1+\beta^2) \mathrm{prec} (N, \mathbb{S}, \mathbb{R}, \mathbb{C})  \mathrm{recall} (N, \mathbb{S}, \mathbb{R}, \mathbb{C})
+    }{
+        \beta^2 \mathrm{prec} (N, \mathbb{S}, \mathbb{R}, \mathbb{C}) + \mathrm{recall} (N, \mathbb{S}, \mathbb{R}, \mathbb{C})
+    }
+\end{align*}
+where $\beta$ is a factor denoting how important recall is in comparison to precision.
+\endgroup
+In this paper, we call this $F_{\beta}$ score GREEN${}_{\beta}$.
+
+\subsection{GREEN for Multiple References}
+\label{sec:multiple_references}
+
+When we use multiple references, i.e., when $m$ reference sentences $R_{i_1},\ldots,R_{i_m}$ are given for the $i$-th source sentence $S_i$, GREEN selects the reference sentence $\hat{R}_i$ that maximizes the sentence-level GREEN for the corrected sentence $C_i$ as follows:
+\begin{equation}
+    \hat{R}_i = \operatorname*{argmax}_{\mathclap{R \in \{R_{i_1}, \ldots, R_{i_m}\}}} \mathrm{GREEN}_{\beta}(N, (S_i), (R), (C_i)).
+    \label{eq:rhat}
+\end{equation}
+We compute $\mathrm{GREEN}_{\beta}(\mathbb{S}, \hat{\mathbb{R}}, \mathbb{C})$ using $D$ reference sentences $\hat{\mathbb{R}} = \{\hat{R}_1, \ldots\, \hat{R}_D\}$ selected by Equation~(\ref{eq:rhat}).
+This practice of selecting the reference that maximizes the sentence-level $F$-score is also adopted in M${}^2$ and ERRANT.
+
+\subsection{Reformulation of GLEU}
+\label{sec:reformulation}
+
+\begin{figure*}[!t]
+    \begin{align}
+        p_n & = \frac{\displaystyle \smashoperator[r]{\sum_{\forallngramx \in R \cap C}} m_{R \cap C} (x) - \smashoperator{\sum_{\forallngramx \in S \cap C}} \max\{0, m_{S \cap C} (x) - m_{R \cap C} (x)\}}{\displaystyle \smashoperator{\sum_{\forallngramx \in C}} m_C (x)} \label{eq:original_gleu} \\
+        & = \frac{\displaystyle \smashoperator[r]{\sum_{\forallngramx \in R \cap C}} m_{R \cap C} (x) - \smashoperator{\sum_{\forallngramx \in S \cap C}} \max\{0, \min(m_S (x), m_C (x)) - \min(m_R (x), m_C (x))\}}{\displaystyle \smashoperator{\sum_{\forallngramx \in C}} m_C (x)} \nonumber \\
+        & = \frac{\displaystyle \smashoperator[r]{\sum_{\forallngramx \in R \cap C}} m_{R \cap C} (x) - \smashoperator{\sum_{\forallngramx \in S \cap C}} \max\{0, \min(m_S (x), m_C (x)) - m_R (x)\}}{\displaystyle \smashoperator{\sum_{\forallngramx \in C}} m_C (x)} \nonumber \\
+        & = \frac{\displaystyle \smashoperator[r]{\sum_{\forallngramx}} m_{R \cap C} (x) - \smashoperator{\sum_{\forallngramx}} m_{(S \cap C) \setminus R} (x)}{\displaystyle \smashoperator{\sum_{\forallngramx}} m_C (x)}
+        = \frac{\smashoperator[r]{\sum_{\forallngramx}} \textsf{TI} (x) + \textsf{TK} (x) - \textsf{UD} (x)}{\smashoperator[r]{\sum_{\forallngramx}} \textsf{TI} (x) + \textsf{TK} (x) + \textsf{OI} (x) + \textsf{UD} (x)} \label{eq:reformulated_gleu}
+    \end{align}
+    \caption{Reformulation of GLEU.}
+    \label{fig:gleu}
+\end{figure*}
+
+To compare GREEN with GLEU, we transform GLEU into a form using the representations in Equations (\ref{eq:true_delete}) through (\ref{eq:under_insert}).
+Equation~(\ref{eq:original_gleu}) is a multiset-based representation of the original GLEU formula.
+The transformation in Figure~\ref{fig:gleu} results in Equation~(\ref{eq:reformulated_gleu}).
+We can see that GLEU is calculated by subtracting \textsf{UD} as penalty term from the numerator of $n$-gram precision $\sum m_{R \cap C} (x) / \sum m_{C} (x)$.
+GLEU uses only \textsf{TI}, \textsf{TK}, \textsf{OI}, and \textsf{UD} from Equations~(\ref{eq:true_delete}) through (\ref{eq:under_insert}), while GREEN uses all of them.
+GLEU has \textsf{FN}s in the penalty term but no \textsf{FP}s, which could lead to underestimating \textsf{FP}s and unreasonably giving high scores to systems that make aggressively incorrect edits.
+
+\section{Experiments}
+\label{sec:experiment}
+
+\subsection{Settings}
+\label{sec:settings}
+
+To demonstrate the effectiveness of GREEN, we computed its correlation with human judgments on the CoNLL-2014 evaluation dataset~\citep{grundkiewicz-etal-2015-human} and the SEEDA dataset~\citep{10.1162/tacl_a_00676}.
+The CoNLL-2014 dataset is based on the test dataset of the CoNLL-2014 shared task~\citep{ng-etal-2014-conll}, which utilizes student essays and consists of 1,312 source sentences.
+In this dataset, each instance has two reference sentences.
+This evaluation dataset consists of the rankings for each instance from 13 GEC system outputs~(12 submissions of the shared task participants and the source text).
+The SEEDA dataset shares the source and reference sentences with the CoNLL-2014 dataset.
+This dataset consists of the rankings for 15 corrected texts, including source text and two human-written texts.
+To follow modern trends in GEC, SEEDA employs the modern neural systems, while the CoNLL-2014 dataset consists of classical systems.
+The default setting of the SEEDA evaluation excludes two fluency texts~(GPT-3.5 corrected text and human-written text) from 15 texts, and we followed this.
+SEEDA has two system rankings with different annotation methods: SEEDA-S for the sentence-based human evaluation and SEEDA-E for the edit-based human evaluation.
+
+Following \citet{grundkiewicz-etal-2015-human}, we measure Pearson $r$ and Spearman $\rho$ correlation coefficients between the evaluation metric scores and human rankings.
+We must convert them into corpus-level system scores because the human judgment dataset consists of sentence-level rankings.
+We use the Expected Wins~(EW) score~\citep{bojar-etal-2013-findings} employed in the WMT13 task of the evaluation metric as the corpus-level system score because \citet{grundkiewicz-etal-2015-human} validated that we can obtain high accuracy by EW with the human judgment dataset for GEC.
+
+In our experiments, for $n$-gram-based metrics, we use a maximum $n$-gram length of $N=4$ for word-level tokenization following the setting of GLEU, and $N=6$ for character-level following the setting of CHRF~\citep{popovic-2015-chrf}, which is a character-level metric for machine translation.
+The difference in tokenization is denoted as ``wordGREEN'' (word-level) or ``charGREEN'' (character-level).
+
+\begin{table*}[!t]
+    \centering
+    \tabcolsep 4pt
+    \begin{tabular}{lrrrrrrrrrrrr}
+        \hline
+        & \multicolumn{6}{c}{Corpus-Level Metrics}
+        & \multicolumn{6}{c}{Sentence-Level Metrics} \\
+        & \multicolumn{2}{c}{CoNLL}
+        & \multicolumn{2}{c}{SEEDA-S}
+        & \multicolumn{2}{c}{SEEDA-E}
+        & \multicolumn{2}{c}{CoNLL}
+        & \multicolumn{2}{c}{SEEDA-S}
+        & \multicolumn{2}{c}{SEEDA-E} \\
+        & \multicolumn{1}{c}{$r$} & \multicolumn{1}{c}{$\rho$}
+        & \multicolumn{1}{c}{$r$} & \multicolumn{1}{c}{$\rho$}
+        & \multicolumn{1}{c}{$r$} & \multicolumn{1}{c}{$\rho$}
+        & \multicolumn{1}{c}{$r$} & \multicolumn{1}{c}{$\rho$}
+        & \multicolumn{1}{c}{$r$} & \multicolumn{1}{c}{$\rho$}
+        & \multicolumn{1}{c}{$r$} & \multicolumn{1}{c}{$\rho$} \\
+        \hline
+        \multicolumn{13}{l}{Alignment-based $F$-score} \\
+        M${}^2$ &
+        0.623 & 0.687 & 0.616 & 0.517 & 0.736 & 0.776 &
+        0.872 & 0.731 & 0.797 & 0.762 & 0.869 & \textbf{0.951} \\
+        ERRANT & 
+        0.644 & 0.687 & 0.529 & 0.364 & 0.690 & 0.699 & 
+        0.871 & 0.775 & 0.764 & 0.727 & 0.855 & 0.930 \\
+        PT-M${}^2$ &
+        0.686 & 0.786 & 0.737 & 0.720 & 0.798 & 0.916 &
+        \textbf{0.934} & \textbf{0.890} & 0.831 & 0.804 & 0.878 & 0.930 \\
+        CLEME &
+        0.648 & 0.709 & 0.573 & 0.427 & 0.702 & 0.727 &
+        0.877 & 0.824 & 0.818 & 0.804 & 0.872 & 0.930 \\
+        \hline
+        \multicolumn{13}{l}{$n$-gram-based precision} \\
+        wordGLEU &
+        0.696 & 0.445 & 0.870 & 0.811 & 0.891 & 0.895 &
+        0.779 & 0.720 & 0.926 & \textbf{0.923} & 0.915 & 0.916 \\
+        charGLEU &
+        0.606 & 0.593 & 0.807 & 0.706 & 0.843 & 0.867 &
+        0.655 & 0.665 & 0.880 & 0.853 & 0.905 & 0.937 \\
+        \hline
+        \multicolumn{4}{l}{$n$-gram-based $F$-score} \\
+        wordGREEN &
+        0.741 & 0.698 & \textbf{0.920} & \textbf{0.909} & \textbf{0.911} & \textbf{0.930} &
+        0.835 & 0.731 & 0.922 & 0.902 & 0.920 & 0.937 \\
+        charGREEN &
+        \textbf{0.786} & \textbf{0.813} & 0.913 & 0.881 & \textbf{0.911} & 0.909 &
+        0.834 & 0.852 & \textbf{0.928} & 0.881 & \textbf{0.930} & 0.916 \\
+        \hline
+    \end{tabular}
+    \caption{Pearson~($r$) and Spearman~($\rho$) correlation coefficients between each metric and the human score of the CoNLL-2014 evaluation dataset and the SEEDA dataset.}
+    \label{tab:correlations}
+\end{table*}
+
+\citet{napoles-etal-2016-theres} reported that the average of sentence-level scores is better for evaluating the GEC systems than the corpus-level score when using M${}^2$ and GLEU.
+However, corpus-level metric is adopted to measure the system performance in the CoNLL-2014 shared task~\citep{ng-etal-2014-conll} and the BEA-2019 shared task~\citep{bryant-etal-2019-bea}.
+Because it is important for an evaluation measure to perform well at both the corpus-level and sentence-level metrics, we conduct experiments at both levels in this paper.
+
+After the CoNLL-2014 shared task first adopted $\beta = 0.5$ for M${}^2$, it has been the standard practice to use $F_{0.5}$ for alignment-based $F$-scores.
+Since it is more important for a GEC system to be precise than to correct as many errors as possible, it is considered better to weigh precision twice more than recall for M${}^2$ and its variants.
+However, weighing precision more in $n$-gram-based $F$-score results that the metric most highly evaluates the unedited source sentence because precision is 100 for the source sentence, which contains no \textsf{FP}s.
+Therefore, we should not weigh precision more than recall in $n$-gram-based $F$-score.
+Furthermore, we should rather weigh recall more than precision because the effect of individual annotator bias~\citep{bryant-ng-2015-far} may unreasonably reduce precision due to the system corrections such that they are correct but not edited by the annotator.
+To alleviate this annotator bias, we employ $\beta = 2.0$, which weighs recall twice more than precision, for GREEN in our experiments.
+
+\begin{table}[!t]
+    \centering
+    \begin{tabular}{lrr}
+        \hline 
+        \multicolumn{1}{l}{Metric} &
+        \multicolumn{1}{c}{\textsf{AMU}} &
+        \multicolumn{1}{c}{\textsf{AMU-S}} \\ \hline
+        M${}^2$ & 4.34 & 196.60 \\
+        ERRANT & 12.35 & 14.34 \\
+        PT-M${}^2$ & 109.82 & $>$ 1 hour \\
+        CLEME & 10.15 & 12.10 \\
+        wordGLEU & 2.69 & 2.80 \\
+        wordGREEN & 0.55 & 0.56 \\ \hline
+    \end{tabular}
+    \caption{The average execution time in seconds to evaluate the \textsf{AMU} system output in the CoNLL-2014 dataset and the slow \textsf{AMU}~(\textsf{AMU-S}) in which one sentence in \textsf{AMU} is replaced by an example making M${}^2$ slow.}
+    \label{tab:time}
+\end{table}
+
+\subsection{Results of Corpus-Level Metrics}
+\label{sec:corpus_level_evaluation}
+
+The correlation coefficients between the reference-based corpus-level GEC metrics and the EW scores on the CoNLL and SEEDA datasets are shown in the left half of Table~\ref{tab:correlations}.
+We confirmed that wordGREEN or charGREEN performs the best in these corpus-level metrics.
+We confirmed that wordGREEN and charGREEN perform the best on the CoNLL-2014 and SEEDA datasets, respectively, in corpus-level metrics.
+The three alignment-based $F$-scores of M${}^2$, ERRANT, and CLEME show similar performance, while PT-M${}^2$ is better than these metrics, which implies that the impact of incorporating the pre-trained model is significant.
+GLEU shows a relatively worse performance with Spearman $\rho$ in CoNLL-2014 as shown in \citet{chollampatt-ng-2018-reassessment}, while GLEU shows a relatively better performance in SEEDA as shown in \citet{10.1162/tacl_a_00676}.
+We can confirm that GREEN, in contrast to GLEU, performs consistently well in both classical and neural system evaluations.
+
+\subsection{Results of Sentence-Level Metrics}
+\label{sec:sentence_level_evaluation}
+
+The correlation coefficients between the reference-based sentence-level GEC metrics and the EW scores on the CoNLL and SEEDA datasets are shown in the right half of Table~\ref{tab:correlations}.
+We can confirm that wordGREEN and charGREEN show comparable performance to the existing sentence-level metrics.
+In particular, charGREEN shows the best Pearson correlation coefficients $r$ on the SEEDA-S and SEEDA-E datasets.
+On CoNLL-2014, PT-M${}^2$ shows the highest correlation using a pre-trained model BERT.
+All the sentence-level metrics show higher correlations than their corpus-level counterparts, as shown in \citet{napoles-etal-2016-theres}.
+The GEC field needs to investigate why sentence-level metrics are good in future work.
+
+\subsection{Efficiency of GREEN}
+\label{sec:speed}
+
+We measured the average execution time of 10 runs to calculate the score for evaluating the output of the \textsf{AMU} system that shows the highest score with human evaluation in the CoNLL-2014 shared task.
+As mentioned in Section~\ref{sec:m2}, the worst-case time complexity of M${}^2$ is quite high.
+We also measure the average execution time of \textsf{AMU-S}, which replaces one sentence of \textsf{AMU} with an example\footnote{We included this in Appendix~\ref{sec:appendix}.} making M${}^2$ slow because it corresponds to the worst-case scenario.
+We show the execution times in seconds in Table \ref{tab:time}.
+GREEN has the advantage of being faster than other methods in execution time, although its performance is better than or comparable to others.
+M${}^2$ and PT-M${}^2$ are not practical in the worst-case scenario.
+The advantage of GREEN is that it does not require linguistic resources to compute alignments or pre-trained models, which enables even non-English GEC to perform the evaluation immediately and efficiently in linear time, without the preparation of annotated data required in M${}^2$ and PT-M${}^2$ or linguistic resources required in ERRANT and CLEME.
+Despite an $n$-gram frequency-based method, GLEU takes a longer execution time than GREEN because GLEU samples random references 500 times when using multiple references.
+
+\section{Analysis}
+\label{sec:analysis}
+
+\begin{figure}[!t]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+                width = 7.5cm,
+                height = 6.0cm,
+                xtick={0.0, 1.0, 2.0, 3.0, 4.0, 5.0},
+                ytick={-0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8},
+                xticklabels={0.0, 1.0, 2.0, 3.0, 4.0, 5.0},
+                yticklabels={-0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8},
+                xlabel near ticks, xlabel shift={-2pt},
+                ylabel near ticks, ylabel shift={-1pt},
+                xlabel = $\beta$,
+                ylabel = Pearson $r$,
+                legend entries={wordGREEN, charGREEN, M${}^2$, ERRANT, PT-M${}^2$},
+                legend style={at={(0.95, 0.05)}, anchor=south east}]
+            \input{beta}
+            \addplot[draw=green, color=green] coordinates{\wordgreenbetapearson};
+            \addplot[draw=black, color=black] coordinates{\chargreenbetapearson};
+            \addplot[draw=red, color=red] coordinates{\maxmatchbetapearson};
+            \addplot[draw=blue, color=blue] coordinates{\errantbetapearson};
+            \addplot[draw=purple, color=purple] coordinates{\ptmaxmatchbetapearson};
+            \draw [dashed, help lines] (axis cs: 0.5, -0.5) -- (axis cs: 0.5, 1.0);
+            \draw [dashed, help lines] (axis cs: 2.0, -0.5) -- (axis cs: 2.0, 1.0);
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Pearson correlation coefficient on the CoNLL-2014 dataset varying $\beta$.}
+    \label{fig:beta}
+\end{figure}
+
+\subsection{Impact of $\beta$ for $F$-score}
+\label{sec:optimal_beta}
+
+\begin{figure}[!t]
+    \centering
+    \input{scatter}
+    \scattercorpuschargreena % scatter.tex
+    \scattercorpuschargreenb % scatter.tex
+    \caption{Scatter plots of corpus-level charGREEN scores with $\beta = 1.0$ and that with $\beta = 2.0$ on the CoNLL-2014 submissions.}
+    \label{fig:corpus_green_scatters}
+\end{figure}
+
+In Section~\ref{sec:experiment}, we confirmed the effectiveness of GREEN in terms of performance and efficiency.
+In our experiments, we employed $\beta = 2.0$.
+We investigate the impact of $\beta$ on the performance of GREEN and other $F$-score-based metrics.
+We show the change of Pearson $r$ for $F$-based corpus-level metrics on the CoNLL-2014 dataset when changing the $\beta$ from 0.00 to 5.00 in 0.01 increments in Figure~\ref{fig:beta}.
+ERRANT and PT-M${}^2$, which are variants of M${}^2$, show a similar trend to M${}^2$ in that they correlate better for $ 0 \leq \beta \leq 0.5$.
+We can see that these alignment-based methods and the $n$-gram-based method GREEN show different trends in changing $\beta$.
+GREEN performs better than M${}^2$ and its variants when we set the appropriate $\beta$ such as 2.0.
+However, if $\beta$ is too small, the performance degrades, resulting in negative correlations.
+
+To investigate this cause, we show the corpus-level charGREEN and EW scores at $\beta=1.0, 2.0$ in Figure~\ref{fig:corpus_green_scatters}.
+CharGREEN with $\beta = 1.0$ gives unreasonably high scores to \textsf{IITB}, \textsf{INPUT}, \textsf{SJTU}, and \textsf{UFC}.
+\textsf{INPUT} is the source text without any corrections, and \textsf{IITB}, \textsf{SJTU}, and \textsf{UFC} are the three system outputs with the fewest corrections from the source among all outputs.
+Because these outputs obtain the high precision, GREEN gives unreasonably high scores to them with a smaller $\beta$.
+CharGREEN with $\beta = 2.0$ gives higher scores to systems that actively make correct corrections~(\textsf{AMU}) and lower scores to systems that are excessively conservative~(\textsf{IITB}) or make many incorrect corrections~(\textsf{IPN}), resulting in a high correlation on the CoNLL-2014 evaluation dataset.
+
+\subsection{Evaluating Source and Degradation}
+\label{sec:degradation}
+
+\begin{table}[!t]
+    \centering
+    \setlength{\tabcolsep}{5pt}
+    \begin{tabular}{lrrrr}
+        \hline
+        & \multicolumn{1}{c}{AMU} & \multicolumn{1}{c}{INPUT} & \multicolumn{1}{c}{IPN} & \multicolumn{1}{c}{NULL} \\
+        \hline
+        \multicolumn{5}{l}{Alignment-based $F$-score} \\
+        M${}^2$ & 35.01 & 0.00 & 7.09 & 28.01 \\
+        ERRANT & 31.97 & 0.00 & 5.95 & 0.20 \\
+        PT-M${}^2$ & 35.94 & 0.00 & 5.72 & 2.44 \\
+        CLEME & 25.14 & 0.00 & 4.41 & 33.44 \\
+        \hline
+        \multicolumn{5}{l}{$n$-gram-based precision} \\
+        wordGLEU & 58.08 & 56.34 & 55.08 & 0.00 \\
+        charGLEU & 81.68 & 81.75 & 81.06 & 0.00 \\
+        \hline
+        \multicolumn{5}{l}{$n$-gram-based $F$-score} \\
+        wordGREEN & 79.26 & 76.93 & 76.31 & 43.46 \\
+        charGREEN & 91.48 & 91.00 & 90.74 & 31.28 \\
+        \hline
+        human & 0.628 & 0.456 & 0.300 & \multicolumn{1}{c}{-} \\
+        \hline
+    \end{tabular}
+    \caption{Scores for \textsf{AMU}, \textsf{INPUT}, \textsf{IPN}, and \textsf{NULL} by GEC metrics.}
+    \label{tab:degradation}
+\end{table}
+
+\begin{figure}[!t]
+    \centering
+    \input{scatter}
+    \scattercorpusmaxmatch % scatter.tex
+    \scattercorpusptmaxmatch % scatter.tex
+    \caption{Scatter plots of corpus-level M${}^2$, and PT-M${}^2$ scores on the CoNLL-2014 submissions.}
+    \label{fig:corpus_maxmatch_scatters}
+\end{figure}
+
+\citet{felice-briscoe-2015-towards} pointed out that M${}^2$ suffers from the issue that it cannot evaluate the degraded output text as worse than the source text.
+\citet{napoles-etal-2015-ground} indicated that its cause is that M${}^2$ maximally matches the wrong phrase deletions to the reference edits.
+In fact, given a system that always outputs an empty sentence for each input sentence~(we refer to this system as \textsf{NULL}), this system would rank sixth out of 13 systems~(12 actual task participants and \textsf{NULL}) if it had participated in the CoNLL-2014 shared task.
+This indicates the insensitivity of M${}^2$ to corrupted text, such as that generated by \textsf{NULL}.
+The reason is that M${}^2$ matches the long phrase deletions by \textsf{NULL} to the correct edits in reference and M${}^2$ gives \textsf{NULL} a higher score than it actually is.
+Table~\ref{tab:degradation} shows the scores of the CoNLL-2014 dataset by GEC metrics for \textsf{AMU} (the best system in the human judgment), \textsf{INPUT} (the source), \textsf{IPN} (the worst system) and \textsf{NULL} (empty text).
+Alignment-based $F$-scores~(M${}^2$, ERRANT, PT-M${}^2$, CLEME) gives 0.00 to \textsf{INPUT} containing no edits to evaluate.
+M${}^2$ wrongly evaluates \textsf{NULL} as a relatively better output because it maximally matches phrase deletions.
+Although PT-M${}^2$ faces the same problem as M${}^2$, it can avoid giving a high score to \textsf{NULL} by its model-based weighted score.
+CLEME also wrongly gives a high score to \textsf{NULL} because it excludes empty output sentences from the target of evaluation.
+Since three of 1312 sentences are deleted completely in the CoNLL-2014 reference dataset, CLEME calculates the score of \textsf{NULL} by only evaluating these three sentences.
+Since ERRANT uses the linguistically enhanced alignment, it does not match whole-sentence deletions with the correct reference edits while giving a score of 0.20 for the three deleted sentences.
+
+Figure~\ref{fig:corpus_maxmatch_scatters} shows the scores of M${}^2$ and PT-M${}^2$ and the EW scores.
+These two methods give scores highly correlated with the human evaluation to the systems with human scores between 0.5 and 0.6.
+However, they give inconsistent values to the systems with EW scores between 0.4 and 0.5.
+We can see that the alignment-based $F$-score has problems in evaluating the source and degradation.
+
+Both wordGREEN and charGREEN can evaluate the systems in Table~\ref{tab:degradation} in the correct order~(\textsf{AMU} > \textsf{INPUT} > \textsf{IPN} > \textsf{NULL}).
+WordGLEU can evaluate as GREEN does, however, charGLEU fails to evaluate \textsf{AMU} better than \textsf{INPUT}.
+GLEU cannot evaluate \textsf{TD}, as shown in Equation~(\ref{eq:reformulated_gleu}), which results in rating \textsf{NULL} to be 0.
+On the other hand, GREEN can also evaluate \textsf{TD}s in \textsf{NULL}.
+
+\subsection{Difference between Corpus-level Metric and Sentence-level Metric}
+
+\begin{figure}[!t]
+    \centering
+    \input{scatter}
+    \scattersentchargreenb % scatter.tex
+    \scattersentmaxmatch % scatter.tex
+    \caption{Scatter plots of sentence-level charGREEN and M${}^2$ scores on the CoNLL-2014 submissions.}
+    \label{fig:sentence_scatters}
+\end{figure}
+
+To investigate why sentence-level metrics perform better than their corpus-level counterparts, we show the score of sentence-level charGREEN and M${}^2$ in Figure~\ref{fig:sentence_scatters}.
+We did not find enough differences between corpus-level charGREEN~(shown in Figure~\ref{fig:corpus_green_scatters}) and sentence-level charGREEN worth mentioning.
+On the other hand, sentence-level M${}^2$ gives scores correlated with the human evaluation to the systems with EW scores between 0.4 and 0.5 while corpus-level M${}^2$ fails~(shown in Figure~\ref{fig:corpus_maxmatch_scatters}).
+This is because sentence-level M${}^2$ gives $F = 1.0$ to cases where $S = R = C$, resulting in alleviating the bias to give lower scores to cases closer to \textsf{INPUT}.
+
+\subsection{Incorporating Pre-trained Model}
+\label{sec:pre_trained_model}
+
+We can see that M${}^2$ and PT-M${}^2$ show similar tendencies as a whole, but locally PT-M${}^2$ behaves more similarly to human evaluation.
+For example, in Figure~\ref{fig:corpus_maxmatch_scatters}, the plotted points in the range of 0.5 to 0.6 of the human score are straightly aligned in PT-M${}^2$, but scattered in M${}^2$.
+This implies the effectiveness of incorporating the pre-trained model in GEC evaluation.
+Incorporating the pre-trained model into GREEN may realize the state-of-the-art GEC evaluation.
+We leave this for future work.
+
+\subsection{Evaluating Fluency Edit}
+
+\begin{figure}[!t]
+    \centering
+    \input{scatter}
+    \scatterseeda % scatter.tex
+    \caption{Scatter plots of corpus-level wordGREEN with $\beta = 2.0$ on the SEEDA-S dataset.}
+    \label{fig:seeda_scatters}
+\end{figure}
+
+We follow the default setting of the SEEDA evaluation in which we exclude the two fluency-editing systems~(\textsf{GPT-3.5} and \textsf{REF-F}) from the calculation of correlation coefficients.
+To observe the behavior of evaluating fluent texts by GREEN, we show the score of corpus-level wordGREEN and EW of the SEEDA-S dataset in Figure~\ref{fig:seeda_scatters}.
+We can cofirm that \textsf{INPUT}~(shown by a red dot) and the systems in the default setting~(shown by blue dots) show a high correlation with GREEN.
+On the other hand, two fluency-editing systems~(shown by orange dots) stand out as outliers.
+This result is obvious because the reference texts used in the SEEDA evaluation are not fluency-edited texts.
+However, we need further study on how to properly evaluate fluency-edited texts such as LLM-generated texts, using reference-based evaluation metrics.
+
+\section{Conclusions}
+\label{sec:conclusion}
+
+We proposed an alignment-free GEC evaluation metric, GREEN, which computes $F$-score by comparing edits between multisets.
+GREEN shows a higher correlation for both Pearson and Spearman correlation coefficients for the corpus-level metrics and comparable performance with existing evaluation metrics for the sentence-level metrics while it runs faster than existing methods and does not require the alignment calculation.
+We also analyzed the effect on $\beta$ for $F$-score-based methods.
+We confirmed that alignment-based methods and GREEN have different tendencies on $\beta$.
+We investigated the problem that alignment-based $F$-score is difficult to evaluate the source text and degraded text correctly.
+We confirmed that corpus-level GREEN properly evaluates systems in contrast to existing corpus-level metrics, and sentence-level metrics alleviate the bias of alignment-based $F$-score on the source and degraded texts.
+Further challenges include incorporating pre-trained models and evaluating fluency-edited texts.
+
+\section*{Acknowledgments}
+
+We thank all anonymous reviewers for their careful reading and constructive comments.
+This work was supported by JSPS KAKENHI Grant Number JP23KJ0930 and a project JPNP20006, commissioned by the New Energy and Industrial Technology Development Organization (NEDO).
+
+\bibliography{anthology,custom}
+
+\appendix
+
+\section{Example that M${}^2$ Takes a Long Time to Calculate}
+\label{sec:appendix}
+
+In an issue of the official M${}^2$ GitHub repository\footnote{\url{https://github.com/nusnlp/m2scorer/issues/8}}, an example is given in which M${}^2$ takes a long time to calculate.
+Here is the example in this issue:
+\begin{quote}
+As it is a genetic risk , the patient force might have a high chance of carrying the risk , hence the need to inform their relatives is important . Hence , you are suffering from a genetic disease that the genetic trait might be passed on to your next generation if you have a child . Hence , there is no legal obligation to disclose to their family members , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there is no legal obligation . Hence , there
+\end{quote}
+Such a degeneration of repetition sometimes occurs in neural text generation~\citep{DBLP:conf/iclr/HoltzmanBDFC20}.
+In \textsf{AMU-S}, the 333rd sentence in \textsf{AMU} is replaced by this sentence.
+
+\end{document}

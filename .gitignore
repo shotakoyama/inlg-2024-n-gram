@@ -1,0 +1,9 @@
+*
+!.gitignore
+!acl.sty
+!acl_latex.pdf
+!acl_latex.tex
+!anthology.bib
+!beta.tex
+!custom.bib
+!scatter.tex
