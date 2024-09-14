@@ -1,5 +1,6 @@
 *
 !.gitignore
+!README.md
 !acl.sty
 !acl_latex.pdf
 !acl_latex.tex
